@@ -38,6 +38,15 @@ const toolContractNames: ReadonlySet<string> = new Set(
  * A registration that hides a tool family must not describe its tools as
  * candidates for this server. Unknown names are left to the session owner.
  */
+/** The status view the caller requested, without absent optional fields. */
+const requestedStatusView = (input: {
+  readonly detail: BinarySessionDetail;
+  readonly operation?: string | undefined;
+}) => ({
+  detail: input.detail,
+  ...(input.operation === undefined ? {} : { operation: input.operation }),
+});
+
 const hiddenOperationRefusal = (
   server: EvidenceMcpServer,
   operation: string | undefined,
@@ -123,21 +132,21 @@ export const registerSessionStatusTool = (
         ReturnType<typeof probeSessionAvailability>
       >;
       let status: JsonValue;
+      const view = requestedStatusView(input);
       try {
-        // Session status owns input admission for the requested view, so an
-        // invalid operation is refused before any family availability probe.
-        status = await session.status({
-          signal: context.mcpReq.signal,
-          detail: input.detail,
-          ...(input.operation === undefined
-            ? {}
-            : { operation: input.operation }),
-        });
+        // Refuse an invalid view before any family availability probe, then
+        // take the session snapshot only after the probes complete, so the
+        // reported session state is not older than the availability it joins.
+        session.admitStatusView(view);
         availabilityResults = await probeSessionAvailability(
           options,
           context.mcpReq.signal,
           (family) => server.advertisesFamily(family),
         );
+        status = await session.status({
+          signal: context.mcpReq.signal,
+          ...view,
+        });
       } catch (cause) {
         if (!(cause instanceof AnalysisError)) throw cause;
         return server.delivery.toCallToolResult(err(cause), contract);

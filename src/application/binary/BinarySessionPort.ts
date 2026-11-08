@@ -146,6 +146,15 @@ export interface BinarySessionPort
     readonly detail?: BinarySessionDetail;
     readonly operation?: string;
   }): Promise<JsonValue>;
+  /**
+   * Apply status's input admission without reading session state, so a caller
+   * can refuse invalid input before availability probes and still take the
+   * status snapshot after them. Throws AnalysisInputError.
+   */
+  admitStatusView(view: {
+    readonly detail?: BinarySessionDetail;
+    readonly operation?: string;
+  }): void;
   activeTarget(): BinaryTarget | undefined;
   /** Read a snapshot with failed descriptors retained for session cleanup retry. */
   readAnalysisSnapshot(

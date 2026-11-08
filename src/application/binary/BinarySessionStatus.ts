@@ -62,6 +62,35 @@ interface BinarySessionStatusInput {
   readonly signal?: AbortSignal;
 }
 
+/**
+ * Admit a requested status view without reading session state. Callers that
+ * run availability probes before taking the status snapshot use this first,
+ * so invalid input is refused before any probe starts. Throws
+ * AnalysisInputError; returns the resolved operation requirements, if any.
+ */
+export const admitStatusView = ({
+  detail = "complete",
+  operation,
+  router,
+}: {
+  readonly detail?: BinarySessionDetail;
+  readonly operation?: string;
+  readonly router: Pick<SessionProviderRouter, "deepOperations">;
+}) => {
+  if ((detail === "operation") !== (operation !== undefined))
+    throw new AnalysisInputError("binary_session", {
+      userMessage:
+        'operation is required with detail: "operation" and is only accepted with it.',
+    });
+  if (operation === undefined) return undefined;
+  const requirements = resolveOperationRequirements(
+    operation,
+    router.deepOperations(),
+  );
+  if (!requirements.ok) throw requirements.error;
+  return requirements.value;
+};
+
 /** Project internal provider routing state into the caller-visible session status. */
 export const binarySessionStatus = async ({
   investigation,
@@ -82,17 +111,11 @@ export const binarySessionStatus = async ({
   signal,
 }: BinarySessionStatusInput): Promise<JsonValue> => {
   // Validate the view before any candidate discovery runs.
-  if ((detail === "operation") !== (operation !== undefined))
-    throw new AnalysisInputError("binary_session", {
-      userMessage:
-        'operation is required with detail: "operation" and is only accepted with it.',
-    });
-  const operationRequirements =
-    operation === undefined
-      ? undefined
-      : resolveOperationRequirements(operation, router.deepOperations());
-  if (operationRequirements !== undefined && !operationRequirements.ok)
-    throw operationRequirements.error;
+  const operationRequirements = admitStatusView({
+    detail,
+    ...(operation === undefined ? {} : { operation }),
+    router,
+  });
   const routeCapabilities = (
     bundleResourceRoot === undefined
       ? [...route.capabilities.values()]
@@ -156,11 +179,11 @@ export const binarySessionStatus = async ({
       ? {
           operation,
           operation_requirements: operationRequirementsView(
-            operationRequirements.value,
+            operationRequirements,
           ),
           operation_candidates: operationCandidates(
             candidateStatuses,
-            operationRequirements.value,
+            operationRequirements,
           ),
         }
       : {

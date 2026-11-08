@@ -51,7 +51,7 @@ import {
 import { InvestigationRecords } from "../investigation/InvestigationRecords.js";
 import { recordEvidenceSources } from "../investigation/recordEvidenceSources.js";
 import { BinarySessionRecords } from "./BinarySessionRecords.js";
-import { binarySessionStatus } from "./BinarySessionStatus.js";
+import { admitStatusView, binarySessionStatus } from "./BinarySessionStatus.js";
 import { SessionRuntimeAvailability } from "./SessionRuntimeAvailability.js";
 import { isSourceEvidenceRetainable } from "./AnalysisSnapshotCache.js";
 import type { BinarySessionDetail } from "../../contracts/sessionStatusContract.js";
@@ -1297,6 +1297,14 @@ export class BinarySession
     return restored.error.cleanupIncomplete
       ? sessionCleanupFailure(primary, restored.error, "open_binary")
       : primary;
+  }
+
+  /** Refuse an invalid status view before any availability probe or snapshot. */
+  admitStatusView(view: {
+    readonly detail?: BinarySessionDetail;
+    readonly operation?: string;
+  }): void {
+    admitStatusView({ ...view, router: this.#providerRouter });
   }
 
   /** Describe the active binary session. */
