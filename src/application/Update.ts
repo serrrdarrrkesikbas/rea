@@ -1,4 +1,4 @@
-import { gt, valid } from "semver";
+import { gt, prerelease, valid } from "semver";
 
 import { PRODUCT_IDENTITY } from "../identity.js";
 import type { Result } from "../domain/result.js";
@@ -179,11 +179,31 @@ export const runUpdate = async (
   return cleanupFailure === undefined ? result : { ...result, cleanupFailure };
 };
 
+/** Releases page of the fork that publishes `-fork.N` preview builds. */
+export const FORK_PREVIEW_RELEASES_URL =
+  "https://github.com/serrrdarrrkesikbas/rea/releases";
+
+/**
+ * A fork preview is distributed as a GitHub Release tarball, not from npm.
+ * npm's `rea-agents` releases are upstream builds without the fork's changes,
+ * so updating from the registry would silently replace the fork.
+ */
+const isForkPreview = (version: string): boolean =>
+  prerelease(version)?.[0] === "fork";
+
 const runUpdateWorkflow = async (
   currentVersion: string,
   host: UpdateHost,
   output: UpdateOutput,
 ): Promise<UpdateResult> => {
+  if (isForkPreview(currentVersion))
+    return {
+      status: "failed",
+      currentVersion,
+      latestVersion: null,
+      reason: "version-check",
+      remediation: `This is a fork preview build (${currentVersion}). rea update installs npm's upstream rea-agents, which does not contain this fork's changes, so it was not run. Download a newer preview from ${FORK_PREVIEW_RELEASES_URL} and install its tarball with npm install --global <file>.tgz.`,
+    };
   const installation = await host.installation();
   const release = await host.latestVersion(installation);
   const latestVersion = release.ok ? release.value : null;

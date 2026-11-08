@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import { err, ok, type Result } from "../domain/result.js";
 import {
+  FORK_PREVIEW_RELEASES_URL,
   runUpdate,
   type ReleaseLookupFailure,
   type UpdateHost,
@@ -557,4 +558,41 @@ describe("Bun installation ownership", () => {
       resolve("cache", ".bun", "install", "global"),
     );
   });
+});
+
+describe("fork preview update boundary", () => {
+  it("refuses to replace a fork preview with npm's upstream release", async () => {
+    const host = new FakeUpdateHost();
+    host.release = ok("99.0.0");
+    let lookedUp = false;
+    host.latestVersion = () => {
+      lookedUp = true;
+      return Promise.resolve(host.release);
+    };
+    const result = await runUpdate("6.8.1-fork.1", host);
+    expect(result).toMatchObject({
+      status: "failed",
+      currentVersion: "6.8.1-fork.1",
+      latestVersion: null,
+      reason: "version-check",
+    });
+    expect(result.status === "failed" && result.remediation).toContain(
+      FORK_PREVIEW_RELEASES_URL,
+    );
+    expect(lookedUp).toBe(false);
+    expect(host.installationInspected).toBe(false);
+    expect(host.installedVersions).toEqual([]);
+  });
+
+  it.each(["6.8.1-beta.1", "6.8.1"])(
+    "keeps the npm update path for %s",
+    async (version) => {
+      const host = new FakeUpdateHost();
+      host.release = ok(version);
+      host.verified = ok(version);
+      expect(await runUpdate(version, host)).toMatchObject({
+        status: "current",
+      });
+    },
+  );
 });
