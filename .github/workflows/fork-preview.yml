@@ -8,14 +8,18 @@ name: Fork preview
 on:
   push:
     branches: ["fork/preview-release"]
+  # pull_request (not pull_request_target): pull request code runs with a
+  # read-only token and receives no repository secrets.
+  pull_request:
+    branches: ["fork/preview-release"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: fork-preview-${{ github.ref }}
-  cancel-in-progress: false
+  group: fork-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   HUSKY: "0"
@@ -44,6 +48,15 @@ jobs:
       - run: npm run verify:module-boundaries
       - run: npm run docs:check
       - run: npm run mcp-catalog:check
+      - name: Validate workflow syntax and expressions
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes=
+      - name: Workflow policy tests
+        run: >-
+          npm run test:focused --
+          tests/boundary/filesystem/workflowActionPinning.test.ts
+          tests/boundary/filesystem/ciCachePolicy.test.ts
+          tests/boundary/filesystem/ciCodeqlScope.test.ts
+          tests/boundary/filesystem/ciRequiredLanes.test.ts
       - name: Focused tests for the changed areas
         run: >-
           npm run test:focused --
