@@ -74,6 +74,9 @@ jobs:
           tests/boundary/filesystem/pluginPackage.test.ts
           tests/boundary/process/pluginMcpLauncher.test.ts
           tests/conformance/readmeConsistency.test.ts
+          tests/conformance/releaseConfiguration.test.ts
+          tests/acceptance/setup/updateAliasCli.test.ts
+          tests/boundary/mcp/sessionMcp.test.ts
       - name: Provider tests touched by readiness-gated declarations
         run: >-
           npm run test:focused --
