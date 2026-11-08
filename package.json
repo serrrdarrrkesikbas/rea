@@ -1,16 +1,16 @@
 {
   "name": "rea-agents",
   "mcpName": "io.github.morluto/rea",
-  "version": "6.8.0",
+  "version": "6.8.1-fork.1",
   "description": "Reverse engineer anything from your terminal or agent with one CLI and MCP server.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/morluto/rea.git"
+    "url": "git+https://github.com/serrrdarrrkesikbas/rea.git"
   },
-  "homepage": "https://github.com/morluto/rea#readme",
+  "homepage": "https://github.com/serrrdarrrkesikbas/rea#readme",
   "bugs": {
-    "url": "https://github.com/morluto/rea/issues"
+    "url": "https://github.com/serrrdarrrkesikbas/rea/issues"
   },
   "keywords": [
     "reverse-engineering",
