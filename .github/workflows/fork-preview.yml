@@ -1,0 +1,162 @@
+name: Fork preview
+
+# Builds and checks the fork preview package for serrrdarrrkesikbas/rea only.
+# Read-only: it needs no secrets (see TURBO_TOKEN below), publishes nothing to
+# npm or a website, and creates no release. The packaged tarball is kept as a
+# workflow artifact.
+
+on:
+  push:
+    branches: ["fork/preview-release"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  HUSKY: "0"
+  # Repository cache policy shared with the upstream workflows. The fork has no
+  # TURBO_TOKEN secret and this branch is not the default branch, so the token
+  # stays empty and Turbo uses its local cache only.
+  TURBO_TOKEN: "${{ (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')) && secrets.TURBO_TOKEN || '' }}"
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  TURBO_CACHE: "${{ (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')) && 'local:rw,remote:rw' || 'local:rw,remote:r' }}"
+
+jobs:
+  checks:
+    name: Standard checks and focused tests
+    if: github.repository == 'serrrdarrrkesikbas/rea'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npm run build:cached
+      - run: npm run check:fast
+      - run: npm run format:check
+      - run: npm run verify:module-boundaries
+      - run: npm run docs:check
+      - run: npm run mcp-catalog:check
+      - name: Focused tests for the changed areas
+        run: >-
+          npm run test:focused --
+          src/application/Update.test.ts
+          src/application/binary/BinarySessionStatus.test.ts
+          src/application/CapabilityInventory.test.ts
+          tests/boundary/mcp/providerSelectionMcp.test.ts
+          tests/boundary/mcp/toolFamiliesMcp.test.ts
+          tests/acceptance/toolFamiliesMcp.test.ts
+          tests/boundary/cli/directAnalysisStatus.test.ts
+          tests/boundary/cli/cliToolCoverage.test.ts
+          tests/boundary/cli/capabilitiesOperationCli.test.ts
+          tests/boundary/mcp/toolSchemaValidity.test.ts
+          tests/boundary/providers/readinessRemediationInventory.test.ts
+          tests/boundary/filesystem/pluginPackage.test.ts
+          tests/boundary/process/pluginMcpLauncher.test.ts
+          tests/conformance/readmeConsistency.test.ts
+      - name: Provider tests touched by readiness-gated declarations
+        run: >-
+          npm run test:focused --
+          src/ghidra/GhidraProvider.behavior.test.ts
+          src/ida/IdaProvider.test.ts
+          src/ida/IdaProviderCapabilities.test.ts
+          tests/composition/idaProvider.test.ts
+          tests/boundary/providers/kuna/*.test.ts
+
+  windows-native:
+    name: Build bundled Windows x64 native controls
+    if: github.repository == 'serrrdarrrkesikbas/rea'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Prepare cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y g++-mingw-w64-x86-64
+      - run: npm run build:windows-native
+      - run: npm run verify:windows-native:artifact
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-native-controls
+          path: native/windows/build/
+          if-no-files-found: error
+
+  package:
+    name: Pack and verify the preview package
+    needs: [checks, windows-native]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: windows-native-controls
+          path: native/windows/build/
+      - run: npm run verify:windows-native:artifact
+      - name: Project package verifier
+        run: npm run verify:package
+        env:
+          REA_VERIFIED_PACKAGE_DIRECTORY: .cache/verified-package
+      - name: Collect the verified tarball
+        id: identity
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          mkdir -p .cache/release
+          cp .cache/verified-package/package.tgz ".cache/release/rea-agents-${version}.tgz"
+          (cd .cache/release && sha256sum "rea-agents-${version}.tgz" > SHA256SUMS)
+          cat .cache/release/SHA256SUMS
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fork-preview-package
+          path: .cache/release/
+          if-no-files-found: error
+
+  install:
+    name: Clean install (${{ matrix.os }})
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            .nvmrc
+            scripts/ci/fork-install-smoke.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fork-preview-package
+          path: package
+      - name: Verify the downloaded checksum
+        shell: bash
+        run: |
+          cd package
+          if command -v sha256sum >/dev/null; then sha256sum -c SHA256SUMS; else shasum -a 256 -c SHA256SUMS; fi
+      - name: Install the tarball into an empty prefix and exercise CLI and MCP
+        shell: bash
+        run: node scripts/ci/fork-install-smoke.mjs "package/rea-agents-${{ needs.package.outputs.version }}.tgz" "${{ needs.package.outputs.version }}"
