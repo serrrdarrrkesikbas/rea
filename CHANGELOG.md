@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.8.1-fork.2](https://github.com/serrrdarrrkesikbas/rea/compare/rea-agents-6.8.1-fork.1...rea-agents-6.8.1-fork.2) (unreleased fork preview)
+
+Replaces 6.8.1-fork.1, which is withdrawn because of the bug fixed below.
+
+### Bug Fixes
+
+- **mcp:** `binary_session` takes its session snapshot after the availability probes again, while still refusing invalid `detail`/`operation` input before any probe ([#1](https://github.com/serrrdarrrkesikbas/rea/issues/1)).
+
 ## [6.8.1-fork.1](https://github.com/serrrdarrrkesikbas/rea/compare/rea-agents-6.8.0...rea-agents-6.8.1-fork.1) (unreleased fork preview)
 
 Fork preview of upstream `main` at `015a02d57` from [serrrdarrrkesikbas/rea](https://github.com/serrrdarrrkesikbas/rea); not an upstream release.

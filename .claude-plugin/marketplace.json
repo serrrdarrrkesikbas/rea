@@ -13,7 +13,7 @@
       "source": {
         "source": "npm",
         "package": "rea-agents",
-        "version": "6.8.1-fork.1"
+        "version": "6.8.1-fork.2"
       },
       "category": "development"
     }
