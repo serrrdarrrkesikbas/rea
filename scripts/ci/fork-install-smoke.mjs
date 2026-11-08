@@ -171,13 +171,22 @@ try {
     "--dry-run",
     "--json",
   ]);
-  const setupText = setup.stdout;
+  // The plan shows each registration command as JSON-quoted arguments inside
+  // the action detail, so compare against the quoted entry path.
+  const registrations = (json(setup.stdout)?.plannedActions ?? []).filter(
+    (action) => action.kind === "configure_client",
+  );
   check(
     "setup --dry-run registers the installed entry point",
     setup.status === 0 &&
-      setupText.includes(JSON.stringify(entry).slice(1, -1)) &&
-      !/"npx"|rea-agents@/u.test(setupText),
-    { exit_code: setup.status },
+      registrations.length > 0 &&
+      registrations.every(
+        ({ detail }) =>
+          typeof detail === "string" &&
+          detail.includes(`${JSON.stringify(entry)} "mcp"`) &&
+          !/\bnpx\b|rea-agents@/u.test(detail),
+      ),
+    { exit_code: setup.status, registrations: registrations.length },
   );
 
   // 5. MCP over stdio from the installed package.
