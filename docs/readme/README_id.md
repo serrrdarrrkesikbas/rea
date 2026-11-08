@@ -4,10 +4,10 @@
 > **This is a fork preview, not an official REA release.**
 > [serrrdarrrkesikbas/rea](https://github.com/serrrdarrrkesikbas/rea) is derived from
 > [morluto/rea](https://github.com/morluto/rea) and distributes `rea-agents`
-> **6.8.1-fork.1** as a preview. It is not affiliated with or endorsed by the REA
+> **6.8.1-fork.2** as a preview. It is not affiliated with or endorsed by the REA
 > maintainers. REA's MIT license and its copyright and third-party notices are unchanged.
 
-## Fork preview 6.8.1-fork.1
+## Fork preview 6.8.1-fork.2
 
 **What it adds to REA.** It is upstream `main` at `015a02d57`, plus the changes proposed
 upstream in [morluto/rea#9299](https://github.com/morluto/rea/pull/9299):
@@ -16,27 +16,25 @@ upstream in [morluto/rea#9299](https://github.com/morluto/rea/pull/9299):
   `rea capabilities --operation <tool>` in the CLI. After the selected engine refuses a tool,
   this view lists each deep engine with four separate facts: its availability, its support
   for the open target, whether it is selected, and whether it declares the operations that
-  tool needs. Measured with the installed preview package and a target open, the
-  `search_bytes` view was 16,061 bytes of structured content against 74,458 for
-  `detail: "complete"` (Kuna, ELF), and 38,333 against 115,416 (Ghidra, PE). These are byte
-  counts, not token or speed measurements.
+  tool needs. The release notes give the response sizes measured for this build; they are
+  byte counts, not token or speed measurements.
 - `rea update` does not replace this preview with npm's upstream `rea-agents`.
 
-**Install.** Download `rea-agents-6.8.1-fork.1.tgz` and `SHA256SUMS` from the
+**Install.** Download `rea-agents-6.8.1-fork.2.tgz` and `SHA256SUMS` from the
 [fork releases](https://github.com/serrrdarrrkesikbas/rea/releases), check the checksum, then
 install the file:
 
 ```sh
 sha256sum -c SHA256SUMS            # macOS: shasum -a 256 -c SHA256SUMS
-npm install --global ./rea-agents-6.8.1-fork.1.tgz
-rea --version                      # prints 6.8.1-fork.1
+npm install --global ./rea-agents-6.8.1-fork.2.tgz
+rea --version                      # prints 6.8.1-fork.2
 rea capabilities --operation search_bytes --json
 rea setup                          # registers this installed copy with your agents
 ```
 
 ```powershell
-Get-FileHash .\rea-agents-6.8.1-fork.1.tgz -Algorithm SHA256   # compare with SHA256SUMS
-npm install --global .\rea-agents-6.8.1-fork.1.tgz
+Get-FileHash .\rea-agents-6.8.1-fork.2.tgz -Algorithm SHA256   # compare with SHA256SUMS
+npm install --global .\rea-agents-6.8.1-fork.2.tgz
 rea --version
 ```
 
@@ -70,9 +68,12 @@ Not verified: Hopper, IDA, JEB and other engines; Ghidra on Linux or macOS; macO
   `fork/preview-release`; the broad upstream CI runs only by hand as _Fork full CI_.
   Workflows that publish to npm, the MCP Registry or the website, and engine workflows that
   need self-hosted or licensed runners, are disabled here.
-- Known regression in 6.8.1-fork.1: if a target is opened while a `binary_session` call is
-  still waiting for the Android readiness probe, the response can show the session state from
-  before that open. A fix is pending; see the fork's issues.
+- 6.8.1-fork.1 is withdrawn: its `binary_session` could report session state from before an
+  overlapping target open ([#1](https://github.com/serrrdarrrkesikbas/rea/issues/1)). This build
+  fixes it.
+- Two broad CI lanes fail here exactly as they do on upstream `main`: knip reports an unused
+  upstream script, and the macOS Apple dispatch verifier fails on a malformed-input case. The
+  release notes describe the security scan results.
 - The website, documentation links, badges and Discord below are upstream's and describe
   upstream REA.
 
