@@ -1,10 +1,11 @@
 name: CodeQL production
 
 on:
+  # fork/preview-release is the default branch of the serrrdarrrkesikbas/rea fork.
   push:
-    branches: [main]
+    branches: [main, fork/preview-release]
   pull_request:
-    branches: [main]
+    branches: [main, fork/preview-release]
   schedule:
     - cron: "37 5 * * 1"
   workflow_dispatch:
