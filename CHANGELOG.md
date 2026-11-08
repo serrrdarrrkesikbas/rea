@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.8.1-fork.1](https://github.com/serrrdarrrkesikbas/rea/compare/rea-agents-6.8.0...rea-agents-6.8.1-fork.1) (unreleased fork preview)
+
+Fork preview of upstream `main` at `015a02d57` from [serrrdarrrkesikbas/rea](https://github.com/serrrdarrrkesikbas/rea); not an upstream release.
+
+### Features
+
+- **session:** add operation-focused provider discovery: `binary_session({ detail: "operation", operation })` and `rea capabilities --operation` (proposed upstream in [morluto/rea#9299](https://github.com/morluto/rea/pull/9299)).
+
+### Bug Fixes
+
+- **fork:** `rea update` does not replace a `-fork.N` build with npm's upstream `rea-agents`.
+
 ## [6.8.0](https://github.com/morluto/rea/compare/rea-agents-6.7.0...rea-agents-6.8.0) (2026-10-25)
 
 ### Highlights

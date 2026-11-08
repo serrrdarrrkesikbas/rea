@@ -2,9 +2,31 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { expect } from "vitest";
 
+import { prerelease } from "semver";
+
+import { FORK_PREVIEW_RELEASES_URL } from "../../../src/application/Update.js";
 import { PRODUCT_IDENTITY } from "../../../src/identity.js";
 import { createTestTempDirectory } from "../../fixtures/temporaryDirectory.js";
 import { cliTest } from "../../support/cli/cliFixture.js";
+
+// A -fork.N build refuses rea update before any registry lookup. The alias
+// must then reach that same refusal, with the same output policies, and npm
+// must never run.
+const forkPreview = prerelease(PRODUCT_IDENTITY.packageVersion)?.[0] === "fork";
+const expectedExit = forkPreview ? 1 : 0;
+const expectedResult = forkPreview
+  ? {
+      status: "failed",
+      reason: "version-check",
+      currentVersion: PRODUCT_IDENTITY.packageVersion,
+      latestVersion: null,
+      remediation: expect.stringContaining(FORK_PREVIEW_RELEASES_URL),
+    }
+  : {
+      status: "current",
+      currentVersion: PRODUCT_IDENTITY.packageVersion,
+      latestVersion: PRODUCT_IDENTITY.packageVersion,
+    };
 
 cliTest(
   "root update flag uses the verified workflow and preserves executable output policies",
@@ -68,20 +90,16 @@ cliTest(
         },
       });
     const canonical = await run(["update", "--json"]);
-    expect(canonical.exitCode, canonical.stderr).toBe(0);
-    expect(canonical.json).toMatchObject({
-      status: "current",
-      currentVersion: PRODUCT_IDENTITY.packageVersion,
-      latestVersion: PRODUCT_IDENTITY.packageVersion,
-    });
+    expect(canonical.exitCode, canonical.stderr).toBe(expectedExit);
+    expect(canonical.json).toMatchObject(expectedResult);
     const alias = await run(["--json", "--update"]);
-    expect(alias.exitCode, alias.stderr).toBe(0);
+    expect(alias.exitCode, alias.stderr).toBe(expectedExit);
     expect(alias.json).toEqual(canonical.json);
     for (const flag of ["--no-timings", "--timings=false", "--timings=true"]) {
       const canonicalTimed = await run(["update", "--json", flag]);
       const aliasTimed = await run([flag, "--update", "--json"]);
-      expect(canonicalTimed.exitCode, canonicalTimed.stdout).toBe(0);
-      expect(aliasTimed.exitCode, aliasTimed.stdout).toBe(0);
+      expect(canonicalTimed.exitCode, canonicalTimed.stdout).toBe(expectedExit);
+      expect(aliasTimed.exitCode, aliasTimed.stdout).toBe(expectedExit);
       expect(aliasTimed.json).toEqual(canonicalTimed.json);
       expect(aliasTimed.json).toEqual(canonical.json);
       for (const result of [canonicalTimed, aliasTimed]) {
@@ -98,26 +116,42 @@ cliTest(
       "--full-output",
       "--filter-output=status",
     ]);
-    expect(filtered.exitCode, filtered.stderr).toBe(0);
-    expect(filtered.json).toMatchObject({
-      ok: true,
-      data: "current",
-      meta: { command: expect.stringContaining("update") },
-    });
+    expect(filtered.exitCode, filtered.stderr).toBe(expectedExit);
+    expect(filtered.json).toMatchObject(
+      forkPreview
+        ? {
+            ok: false,
+            error: { status: "failed", reason: "version-check" },
+            meta: { command: expect.stringContaining("update") },
+          }
+        : {
+            ok: true,
+            data: "current",
+            meta: { command: expect.stringContaining("update") },
+          },
+    );
     const failed = await run(["--update", "--json"], true);
     expect(failed.exitCode).toBe(1);
-    expect(failed.json).toMatchObject({
-      status: "failed",
-      reason: "version-check",
-      remediation: expect.stringContaining("owned fake registry denied"),
-    });
     const oversized = await run(["update", "--json"], false, true);
     expect(oversized.exitCode).toBe(1);
-    expect(oversized.json).toMatchObject({
-      status: "failed",
-      reason: "version-check",
-      remediation: expect.stringContaining("complete-output retention budget"),
-    });
+    if (forkPreview) {
+      // The guard answers before the registry, so neither fault is observed.
+      expect(failed.json).toEqual(canonical.json);
+      expect(oversized.json).toEqual(canonical.json);
+    } else {
+      expect(failed.json).toMatchObject({
+        status: "failed",
+        reason: "version-check",
+        remediation: expect.stringContaining("owned fake registry denied"),
+      });
+      expect(oversized.json).toMatchObject({
+        status: "failed",
+        reason: "version-check",
+        remediation: expect.stringContaining(
+          "complete-output retention budget",
+        ),
+      });
+    }
     const before = await readFile(log, "utf8");
     const ambiguous = await run(["providers", "--update", "--json"]);
     expect(ambiguous.exitCode).toBe(1);
@@ -133,11 +167,15 @@ cliTest(
     const commands: unknown[] = before
       .trim()
       .split("\n")
+      .filter((line) => line !== "")
       .map((line) => JSON.parse(line));
-    expect(commands.length).toBeGreaterThan(0);
-    expect(commands).toEqual(
-      expect.arrayContaining([expect.arrayContaining(["view"])]),
-    );
+    if (forkPreview) expect(commands).toEqual([]);
+    else {
+      expect(commands.length).toBeGreaterThan(0);
+      expect(commands).toEqual(
+        expect.arrayContaining([expect.arrayContaining(["view"])]),
+      );
+    }
     for (const command of commands) expect(command).not.toContain("install");
   },
 );
