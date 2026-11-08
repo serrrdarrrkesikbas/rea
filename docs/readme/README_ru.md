@@ -1,3 +1,81 @@
+<!-- fork-preview-notice:start -->
+
+> [!WARNING]
+> **This is a fork preview, not an official REA release.**
+> [serrrdarrrkesikbas/rea](https://github.com/serrrdarrrkesikbas/rea) is derived from
+> [morluto/rea](https://github.com/morluto/rea) and distributes `rea-agents`
+> **6.8.1-fork.1** as a preview. It is not affiliated with or endorsed by the REA
+> maintainers. REA's MIT license and its copyright and third-party notices are unchanged.
+
+## Fork preview 6.8.1-fork.1
+
+**What it adds to REA.** It is upstream `main` at `015a02d57`, plus the changes proposed
+upstream in [morluto/rea#9299](https://github.com/morluto/rea/pull/9299):
+
+- `binary_session({ detail: "operation", operation: "<tool>" })` over MCP, and
+  `rea capabilities --operation <tool>` in the CLI. After the selected engine refuses a tool,
+  this view lists each deep engine with four separate facts: its availability, its support
+  for the open target, whether it is selected, and whether it declares the operations that
+  tool needs. Measured with the installed preview package and a target open, the
+  `search_bytes` view was 16,061 bytes of structured content against 74,458 for
+  `detail: "complete"` (Kuna, ELF), and 38,333 against 115,416 (Ghidra, PE). These are byte
+  counts, not token or speed measurements.
+- `rea update` does not replace this preview with npm's upstream `rea-agents`.
+
+**Install.** Download `rea-agents-6.8.1-fork.1.tgz` and `SHA256SUMS` from the
+[fork releases](https://github.com/serrrdarrrkesikbas/rea/releases), check the checksum, then
+install the file:
+
+```sh
+sha256sum -c SHA256SUMS            # macOS: shasum -a 256 -c SHA256SUMS
+npm install --global ./rea-agents-6.8.1-fork.1.tgz
+rea --version                      # prints 6.8.1-fork.1
+rea capabilities --operation search_bytes --json
+rea setup                          # registers this installed copy with your agents
+```
+
+```powershell
+Get-FileHash .\rea-agents-6.8.1-fork.1.tgz -Algorithm SHA256   # compare with SHA256SUMS
+npm install --global .\rea-agents-6.8.1-fork.1.tgz
+rea --version
+```
+
+A global install replaces any other `rea-agents` in the same npm prefix. To try the preview
+next to an existing REA, add `--prefix <empty directory>` and run that prefix's `rea`.
+`npx rea-agents`, `npm install -g rea-agents`, `install.sh` and the Claude Code or Codex
+plugin marketplaces install upstream releases from npm, which do not contain these changes.
+Every later "Quick start" command in this README that uses `npx` or the plugins installs
+upstream REA.
+
+**Environments.**
+
+Verified with the release tarball, installed into an empty npm prefix with Node.js 24.22.1:
+
+| Environment                                                  | Verified                                                                                                                                  |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows 11 x64 (local)                                       | Install, CLI and MCP checks; real Ghidra 12.1.4 with JDK 21 on a PE executable: open, operation view, `search_strings` and `search_bytes` |
+| Windows x64 (GitHub Actions `windows-latest`)                | Install, CLI and MCP checks                                                                                                               |
+| Linux x64 (GitHub Actions `ubuntu-latest`; WSL Ubuntu 24.04) | Install, CLI and MCP checks; on WSL, real Kuna 1.990 on an ELF executable                                                                 |
+| macOS arm64 (GitHub Actions `macos-latest`)                  | Install, CLI and MCP checks                                                                                                               |
+
+The CLI and MCP checks cover `rea --version`, `capabilities --operation`, refusal of invalid input, the `rea update` guard, `rea setup --dry-run` registering the installed copy, and the `summary`, `complete` and `operation` views of `binary_session`.
+
+Not verified: Hopper, IDA, JEB and other engines; Ghidra on Linux or macOS; macOS x64; Node.js 22 and 26; applying `rea setup` to a real agent client and using REA from that agent; the plugin installs; the full upstream CI and real-engine workflows.
+
+**Known limitations.**
+
+- The operation view covers tools whose required operations are declared by deep engines.
+  Other tools are refused as invalid input; use `detail: "complete"` for them.
+- Only this fork's preview workflow runs here; the full upstream CI and the real-engine
+  workflows have not been run for this preview.
+- The website, documentation links, badges and Discord below are upstream's and describe
+  upstream REA.
+
+**Report problems** for this preview in the
+[fork's issues](https://github.com/serrrdarrrkesikbas/rea/issues), not upstream.
+
+<!-- fork-preview-notice:end -->
+
 <div align="center">
 
 [English](../../README.md) · [简体中文](README_zh.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Türkçe](README_tr.md) · **Русский** · [Tiếng Việt](README_vi.md) · [ไทย](README_th.md) · [Deutsch](README_de.md) · [Español](README_es.md) · [Français](README_fr.md) · [Українська](README_uk.md) · [Polski](README_pl.md) · [Português (Brasil)](README_pt-BR.md) · [العربية](README_ar.md) · [فارسی](README_fa.md) · [Bahasa Indonesia](README_id.md) · [Italiano](README_it.md)
