@@ -1,0 +1,24 @@
+name: Fork full CI
+
+# Manual broad regression run for serrrdarrrkesikbas/rea. It calls the
+# unchanged upstream CI as a reusable workflow, so the fork never enables that
+# workflow's hourly schedule. The run qualifies the exact dispatched commit,
+# passes no secrets and writes nothing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Upstream CI lanes
+    if: github.repository == 'serrrdarrrkesikbas/rea'
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      source_sha: ${{ github.sha }}
+      remote_cache_write: false
