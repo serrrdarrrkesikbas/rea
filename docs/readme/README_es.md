@@ -66,8 +66,13 @@ Not verified: Hopper, IDA, JEB and other engines; Ghidra on Linux or macOS; macO
 
 - The operation view covers tools whose required operations are declared by deep engines.
   Other tools are refused as invalid input; use `detail: "complete"` for them.
-- Only this fork's preview workflow runs here; the full upstream CI and the real-engine
-  workflows have not been run for this preview.
+- This fork's preview checks and CodeQL run on pushes and pull requests to
+  `fork/preview-release`; the broad upstream CI runs only by hand as _Fork full CI_.
+  Workflows that publish to npm, the MCP Registry or the website, and engine workflows that
+  need self-hosted or licensed runners, are disabled here.
+- Known regression in 6.8.1-fork.1: if a target is opened while a `binary_session` call is
+  still waiting for the Android readiness probe, the response can show the session state from
+  before that open. A fix is pending; see the fork's issues.
 - The website, documentation links, badges and Discord below are upstream's and describe
   upstream REA.
 
